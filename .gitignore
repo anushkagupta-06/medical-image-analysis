@@ -10,3 +10,5 @@ static/reports/*
 models/pretrained/*.pth
 
 *.ipynb_checkpoints
+
+test_images/
