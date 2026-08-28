@@ -1,0 +1,11 @@
+flask
+opencv-python
+numpy
+torch
+torchvision
+scikit-image
+scikit-learn
+matplotlib
+pydicom
+pillow
+reportlab
