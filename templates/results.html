@@ -2,13 +2,11 @@
 
 {% block content %}
 
-<div class="results-container">
+<div class="final-results">
 
-    <!-- ==========================================
-         TOP BAR
-         ========================================== -->
+    <!-- TOP -->
 
-    <div class="results-topbar">
+    <div class="final-topbar">
 
         <a href="/" class="back-link">
             ← New Analysis
@@ -22,590 +20,183 @@
     </div>
 
 
-    <!-- ==========================================
-         HEADER
-         ========================================== -->
+    <!-- HEADER -->
 
-    <section class="results-header">
+    <section class="final-header">
 
         <span class="badge">
-            CHEST X-RAY ANALYSIS
+            PNEUMOAI ANALYSIS
         </span>
 
         <h1>
-            Analysis Results
+            Chest X-Ray Analysis
         </h1>
 
         <p>
-            Step-by-step visualization of the DSP and
-            image-processing pipeline.
+            Automated medical image analysis using
+            DSP and deep learning techniques.
         </p>
 
     </section>
 
 
-    <!-- ==========================================
-         PIPELINE STEPPER
-         ========================================== -->
+    <!-- MAIN RESULT -->
 
-    <section class="pipeline-card">
+    <section class="result-card">
 
-        <div class="pipeline-title">
-            <span>ANALYSIS PIPELINE</span>
-        </div>
+        <div class="result-image">
 
-        <div class="pipeline">
-
-            <div class="pipeline-step active">
-                <div class="pipeline-circle">1</div>
-                <span>Input</span>
-            </div>
-
-            <div class="pipeline-line active"></div>
-
-            <div class="pipeline-step active">
-                <div class="pipeline-circle">2</div>
-                <span>Preprocessing</span>
-            </div>
-
-            <div class="pipeline-line active"></div>
-
-            <div class="pipeline-step active">
-                <div class="pipeline-circle">3</div>
-                <span>Segmentation</span>
-            </div>
-
-            <div class="pipeline-line active"></div>
-
-            <div class="pipeline-step active">
-                <div class="pipeline-circle">4</div>
-                <span>Features</span>
-            </div>
-
-            <div class="pipeline-line"></div>
-
-            <div class="pipeline-step pending">
-                <div class="pipeline-circle">5</div>
-                <span>Classification</span>
-            </div>
+            <img
+                src="{{ url_for(
+                    'static',
+                    filename=preprocessing_images['original']
+                ) }}"
+                alt="Chest X-Ray"
+            >
 
         </div>
 
-    </section>
+
+        <div class="result-content">
+
+            <span class="result-label">
+                CLASSIFICATION RESULT
+            </span>
 
 
-    <!-- ==========================================
-         PREPROCESSING
-         ========================================== -->
-
-    <section class="results-section">
-
-        <div class="section-heading">
-
-            <div class="section-number">
-                01
-            </div>
-
-            <div class="section-title">
-
-                <span class="section-label">
-                    IMAGE PROCESSING
-                </span>
+            {% if prediction %}
 
                 <h2>
-                    Preprocessing Pipeline
+                    {{ prediction }}
+                </h2>
+
+                {% if confidence %}
+
+                <div class="confidence">
+
+                    <span>
+                        Confidence
+                    </span>
+
+                    <strong>
+                        {{ confidence }}%
+                    </strong>
+
+                </div>
+
+                {% endif %}
+
+            {% else %}
+
+                <h2 class="pending">
+                    Classification Pending
                 </h2>
 
                 <p>
-                    Noise reduction, grayscale conversion and
-                    contrast enhancement of the chest X-ray.
+                    The DSP and image-processing pipeline
+                    has completed successfully. The CNN
+                    and VGG16 classification models will
+                    provide the final diagnosis.
                 </p>
 
-            </div>
-
-        </div>
-
-
-        <div class="image-grid">
-
-            {% set preprocessing_labels = {
-
-                'original': 'Original X-Ray',
-
-                'grayscale': 'Grayscale',
-
-                'gaussian_blur': 'Gaussian Blur',
-
-                'median_filter': 'Median Filter',
-
-                'bilateral_filter': 'Bilateral Filter',
-
-                'denoised': 'Denoised',
-
-                'histogram_eq': 'Histogram Equalization',
-
-                'clahe': 'CLAHE Enhancement',
-
-                'sharpened': 'Sharpened Image'
-
-            } %}
-
-
-            {% for name, path in preprocessing_images.items() %}
-
-            <div class="processing-card">
-
-                <div class="processing-image">
-
-                    <img
-                        src="{{ url_for('static', filename=path) }}"
-                        alt="{{ preprocessing_labels.get(name, name) }}"
-                    >
-
-                    <div class="image-number">
-                        {{ loop.index }}
-                    </div>
-
-                </div>
-
-                <div class="processing-info">
-
-                    <h3>
-                        {{ preprocessing_labels.get(name, name) }}
-                    </h3>
-
-                    <span>
-                        {% if name == 'original' %}
-                            Input Image
-                        {% elif name == 'grayscale' %}
-                            Color Conversion
-                        {% elif name == 'clahe' %}
-                            Contrast Enhancement
-                        {% else %}
-                            Image Processing
-                        {% endif %}
-                    </span>
-
-                </div>
-
-            </div>
-
-            {% endfor %}
+            {% endif %}
 
         </div>
 
     </section>
 
 
-    <!-- ==========================================
-         SEGMENTATION
-         ========================================== -->
+    <!-- PIPELINE STATUS -->
 
-    <section class="results-section">
+    <section class="status-section">
 
-        <div class="section-heading">
-
-            <div class="section-number">
-                02
-            </div>
-
-            <div class="section-title">
-
-                <span class="section-label">
-                    REGION ANALYSIS
-                </span>
-
-                <h2>
-                    Segmentation Pipeline
-                </h2>
-
-                <p>
-                    Different segmentation techniques used to
-                    identify relevant image regions.
-                </p>
-
-            </div>
-
-        </div>
-
-
-        <div class="image-grid">
-
-            {% set segmentation_labels = {
-
-                'binary_threshold': 'Binary Threshold',
-
-                'otsu_threshold': 'Otsu Threshold',
-
-                'adaptive_threshold': 'Adaptive Threshold',
-
-                'canny_edges': 'Canny Edge Detection',
-
-                'sobel_edges': 'Sobel Edge Detection',
-
-                'morphological': 'Morphological Processing',
-
-                'watershed': 'Watershed Segmentation',
-
-                'roi_mask': 'ROI Mask',
-
-                'roi_annotated': 'Detected ROI'
-
-            } %}
-
-
-            {% for name, path in segmentation_images.items() %}
-
-            <div class="processing-card segmentation-card">
-
-                <div class="processing-image">
-
-                    <img
-                        src="{{ url_for('static', filename=path) }}"
-                        alt="{{ segmentation_labels.get(name, name) }}"
-                    >
-
-                    <div class="image-number">
-                        {{ loop.index }}
-                    </div>
-
-                </div>
-
-                <div class="processing-info">
-
-                    <h3>
-                        {{ segmentation_labels.get(name, name) }}
-                    </h3>
-
-                    <span>
-                        Segmentation Stage
-                    </span>
-
-                </div>
-
-            </div>
-
-            {% endfor %}
-
-        </div>
-
-    </section>
-
-
-    <!-- ==========================================
-         ROI
-         ========================================== -->
-
-    {% if roi_info %}
-
-    <section class="results-section">
-
-        <div class="section-heading">
-
-            <div class="section-number">
-                03
-            </div>
-
-            <div class="section-title">
-
-                <span class="section-label">
-                    REGION OF INTEREST
-                </span>
-
-                <h2>
-                    Detected ROI
-                </h2>
-
-                <p>
-                    Geometric information calculated from the
-                    detected region.
-                </p>
-
-            </div>
-
-        </div>
-
-
-        <div class="roi-panel">
-
-            <div class="roi-main">
-
-                <div class="roi-icon">
-                    ◎
-                </div>
-
-                <div>
-
-                    <span>
-                        DETECTED REGION
-                    </span>
-
-                    <h3>
-                        Region of Interest
-                    </h3>
-
-                </div>
-
-            </div>
-
-
-            <div class="roi-grid">
-
-                <div class="roi-card">
-
-                    <span>
-                        X Position
-                    </span>
-
-                    <strong>
-                        {{ roi_info.x }}
-                    </strong>
-
-                    <small>px</small>
-
-                </div>
-
-
-                <div class="roi-card">
-
-                    <span>
-                        Y Position
-                    </span>
-
-                    <strong>
-                        {{ roi_info.y }}
-                    </strong>
-
-                    <small>px</small>
-
-                </div>
-
-
-                <div class="roi-card">
-
-                    <span>
-                        Width
-                    </span>
-
-                    <strong>
-                        {{ roi_info.w }}
-                    </strong>
-
-                    <small>px</small>
-
-                </div>
-
-
-                <div class="roi-card">
-
-                    <span>
-                        Height
-                    </span>
-
-                    <strong>
-                        {{ roi_info.h }}
-                    </strong>
-
-                    <small>px</small>
-
-                </div>
-
-
-                <div class="roi-card">
-
-                    <span>
-                        Area
-                    </span>
-
-                    <strong>
-                        {{ "%.0f"|format(roi_info.area) }}
-                    </strong>
-
-                    <small>px²</small>
-
-                </div>
-
-
-                <div class="roi-card">
-
-                    <span>
-                        Perimeter
-                    </span>
-
-                    <strong>
-                        {{ "%.1f"|format(roi_info.perimeter) }}
-                    </strong>
-
-                    <small>px</small>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </section>
-
-    {% endif %}
-
-
-    <!-- ==========================================
-         FEATURE EXTRACTION
-         ========================================== -->
-
-    <section class="results-section">
-
-        <div class="section-heading">
-
-            <div class="section-number">
-                04
-            </div>
-
-            <div class="section-title">
-
-                <span class="section-label">
-                    FEATURE ENGINEERING
-                </span>
-
-                <h2>
-                    Extracted Features
-                </h2>
-
-                <p>
-                    Texture, shape and intensity descriptors
-                    extracted from the processed image.
-                </p>
-
-            </div>
-
-        </div>
-
-
-        <!-- Feature summary -->
-
-        <div class="feature-summary">
-
-            <div class="feature-stat">
-
-                <div class="feature-stat-number">
-                    {{ features|length }}
-                </div>
-
-                <div>
-
-                    <strong>
-                        Numerical Features
-                    </strong>
-
-                    <span>
-                        Extracted successfully
-                    </span>
-
-                </div>
-
-            </div>
-
-
-            <div class="feature-categories">
-
-                <div>
-                    <span class="category-dot texture"></span>
-                    GLCM Texture
-                </div>
-
-                <div>
-                    <span class="category-dot shape"></span>
-                    Shape
-                </div>
-
-                <div>
-                    <span class="category-dot intensity"></span>
-                    Intensity
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- Feature table -->
-
-        <div class="feature-table-wrapper">
-
-            <table class="feature-table">
-
-                <thead>
-
-                    <tr>
-                        <th>#</th>
-                        <th>Feature</th>
-                        <th>Value</th>
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                    {% for key, value in features.items() %}
-
-                    <tr>
-
-                        <td class="feature-index">
-                            {{ loop.index }}
-                        </td>
-
-                        <td>
-                            {{ key|replace('_', ' ')|title }}
-                        </td>
-
-                        <td class="feature-value">
-                            {{ "%.6f"|format(value) }}
-                        </td>
-
-                    </tr>
-
-                    {% endfor %}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </section>
-
-
-    <!-- ==========================================
-         CLASSIFICATION COMING NEXT
-         ========================================== -->
-
-    <section class="next-module">
-
-        <div class="next-module-icon">
-            ◈
-        </div>
-
-        <div class="next-module-content">
+        <div class="status-heading">
 
             <span>
-                NEXT DEVELOPMENT STAGE
+                ANALYSIS STATUS
             </span>
 
             <h2>
-                Deep Learning Classification
+                Processing Completed
             </h2>
 
-            <p>
-                The extracted image information will be passed
-                to the CNN and VGG16 models for pneumonia
-                classification.
-            </p>
+        </div>
 
-            <div class="model-tags">
 
-                <span>CNN</span>
-                <span>VGG16</span>
-                <span>Grad-CAM</span>
+        <div class="status-grid">
+
+            <div class="status-card">
+
+                <span class="check">✓</span>
+
+                <div>
+
+                    <strong>
+                        Image Preprocessing
+                    </strong>
+
+                    <small>
+                        Completed
+                    </small>
+
+                </div>
+
+            </div>
+
+
+            <div class="status-card">
+
+                <span class="check">✓</span>
+
+                <div>
+
+                    <strong>
+                        DSP Analysis
+                    </strong>
+
+                    <small>
+                        Completed
+                    </small>
+
+                </div>
+
+            </div>
+
+
+            <div class="status-card">
+
+                <span class="check">✓</span>
+
+                <div>
+
+                    <strong>
+                        Segmentation
+                    </strong>
+
+                    <small>
+                        Completed
+                    </small>
+
+                </div>
+
+            </div>
+
+
+            <div class="status-card">
+
+                <span class="check">✓</span>
+
+                <div>
+
+                    <strong>
+                        Feature Extraction
+                    </strong>
+
+                    <small>
+                        Completed
+                    </small>
+
+                </div>
 
             </div>
 
@@ -614,18 +205,77 @@
     </section>
 
 
-    <!-- ==========================================
-         FOOTER ACTION
-         ========================================== -->
+    <!-- EXPLAINABILITY -->
 
-    <div class="results-footer">
+    <section class="future-card">
+
+        <div>
+
+            <span>
+                EXPLAINABLE AI
+            </span>
+
+            <h2>
+                Grad-CAM Visualization
+            </h2>
+
+            <p>
+                A visual explanation highlighting the regions
+                that influence the final deep-learning prediction
+                will be available after model integration.
+            </p>
+
+        </div>
+
+        <div class="future-icon">
+            ◈
+        </div>
+
+    </section>
+
+
+    <!-- REPORT -->
+
+    <section class="report-card">
+
+        <div>
+
+            <span>
+                DETAILED ANALYSIS
+            </span>
+
+            <h2>
+                Analysis Report
+            </h2>
+
+            <p>
+                The detailed report will contain preprocessing,
+                segmentation, DSP, feature extraction,
+                classification metrics and explainability results.
+            </p>
+
+        </div>
+
+
+        <button
+            class="report-button"
+            disabled
+        >
+            PDF Report — Coming Soon
+        </button>
+
+    </section>
+
+
+    <!-- NEW ANALYSIS -->
+
+    <div class="final-footer">
 
         <a href="/" class="secondary-button">
             ← Analyze Another X-Ray
         </a>
 
     </div>
-
 
 </div>
 

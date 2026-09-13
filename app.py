@@ -7,6 +7,7 @@ import numpy as np
 from preprocessing.preprocess import preprocess_pipeline
 from segmentation.segment import segment_pipeline
 from models.feature_extractor import extract_all_features
+from utils.dsp_analysis import compute_fft
 
 
 app = Flask(__name__)
@@ -182,17 +183,14 @@ def analyze():
     # -----------------------------------------------------
 
     if "file" not in request.files:
-
         return redirect(url_for("home"))
 
     file = request.files["file"]
 
     if file.filename == "":
-
         return redirect(url_for("home"))
 
     if not allowed_file(file.filename):
-
         return redirect(url_for("home"))
 
     # -----------------------------------------------------
@@ -238,6 +236,28 @@ def analyze():
     )
 
     print("✓ Preprocessing completed")
+
+    # -----------------------------------------------------
+    # DSP FREQUENCY-DOMAIN ANALYSIS
+    # -----------------------------------------------------
+
+    print("\nRunning 2D FFT analysis...")
+
+    fft_image = compute_fft(
+        preprocessing_results["grayscale"]
+    )
+
+    fft_path = os.path.join(
+        session_folder,
+        "fft_spectrum.png"
+    )
+
+    save_image(
+        fft_image,
+        fft_path
+    )
+
+    print("✓ 2D FFT analysis completed")
 
     # -----------------------------------------------------
     # 2. SEGMENTATION
@@ -299,20 +319,13 @@ def analyze():
 
     return render_template(
         "results.html",
-
         session_id=session_id,
-
         preprocessing_images=preprocessing_images,
-
         segmentation_images=segmentation_images,
-
         features=features,
-
         roi_info=roi_info,
-
         prediction=None
     )
-
 
 # ---------------------------------------------------------
 # RUN APPLICATION
@@ -321,3 +334,4 @@ def analyze():
 if __name__ == "__main__":
 
     app.run(debug=True)
+# -----------------------------------------------------
