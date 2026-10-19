@@ -104,6 +104,12 @@ def predict_xray(image_path, heatmap_path):
             predicted_class = int(outputs.argmax(dim=1).item())
             confidence = float(probabilities[predicted_class].item())
 
+            p_normal = float(probabilities[0].item()) * 100
+            p_pneumonia = float(probabilities[1].item()) * 100
+
+            print(f"NORMAL probability: {p_normal:.2f}%")
+            print(f"PNEUMONIA probability: {p_pneumonia:.2f}%")
+
             feature_maps = activations["features"]
 
             gradients = torch.autograd.grad(
