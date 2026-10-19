@@ -10,9 +10,7 @@ PneumoAI | Analysis Results
 <div class="final-results">
 
     <!-- TOP BAR -->
-
     <div class="final-topbar">
-
         <a href="/" class="back-link">
             ← New Analysis
         </a>
@@ -21,72 +19,51 @@ PneumoAI | Analysis Results
             <span class="status-dot"></span>
             Analysis Completed
         </div>
-
     </div>
 
-
     <!-- HEADER -->
-
     <section class="final-header">
+        <span class="badge">PNEUMOAI ANALYSIS</span>
 
-        <span class="badge">
-            PNEUMOAI ANALYSIS
-        </span>
-
-        <h1>
-            Chest X-Ray Analysis
-        </h1>
+        <h1>Chest X-Ray Analysis</h1>
 
         <p>
             Automated medical image analysis using
             digital signal processing and deep learning.
         </p>
-
     </section>
 
-
     <!-- MAIN CLASSIFICATION RESULT -->
-
     <section class="result-card">
 
         <div class="result-image">
-
-            <img
-                src="{{ url_for(
-                    'static',
-                    filename=preprocessing_images['original']
-                ) }}"
-                alt="Uploaded chest X-ray"
-            >
-
+            {% if preprocessing_images and preprocessing_images.get('original') %}
+                <img
+                    src="{{ url_for('static', filename=preprocessing_images['original']) }}"
+                    alt="Uploaded chest X-ray"
+                >
+            {% else %}
+                <p class="image-unavailable">
+                    Original X-ray image is unavailable.
+                </p>
+            {% endif %}
         </div>
 
-
         <div class="result-content">
-
             <span class="result-label">
                 VGG16 CLASSIFICATION RESULT
             </span>
 
             {% if prediction %}
 
-                <h2>
-                    {{ prediction.label }}
-                </h2>
+                <h2>{{ prediction.label }}</h2>
 
                 <div class="confidence">
-
-                    <span>
-                        Model Confidence
-                    </span>
-
-                    <strong>
-                        {{ prediction.confidence }}%
-                    </strong>
-
+                    <span>Model Confidence Score</span>
+                    <strong>{{ prediction.confidence }}%</strong>
                 </div>
 
-                <p>
+                <p class="prediction-description">
                     {% if prediction.label == "PNEUMONIA" %}
                         The model classified this X-ray as
                         pneumonia-positive.
@@ -103,9 +80,7 @@ PneumoAI | Analysis Results
 
             {% else %}
 
-                <h2 class="pending">
-                    Classification Pending
-                </h2>
+                <h2 class="pending">Classification Unavailable</h2>
 
                 <p>
                     The model prediction is not available.
@@ -113,85 +88,57 @@ PneumoAI | Analysis Results
                 </p>
 
             {% endif %}
-
         </div>
 
     </section>
 
-
     <!-- PIPELINE STATUS -->
-
     <section class="status-section">
 
         <div class="status-heading">
-
-            <span>
-                ANALYSIS STATUS
-            </span>
-
-            <h2>
-                Processing Completed
-            </h2>
-
+            <span>ANALYSIS STATUS</span>
+            <h2>Processing Completed</h2>
         </div>
-
 
         <div class="status-grid">
 
             <div class="status-card">
-
                 <span class="check">✓</span>
-
                 <div>
                     <strong>Image Preprocessing</strong>
                     <small>Completed</small>
                 </div>
-
             </div>
 
-
             <div class="status-card">
-
                 <span class="check">✓</span>
-
                 <div>
                     <strong>DSP Analysis</strong>
                     <small>2D FFT completed</small>
                 </div>
-
             </div>
 
-
             <div class="status-card">
-
                 <span class="check">✓</span>
-
                 <div>
                     <strong>Image Segmentation</strong>
                     <small>Completed</small>
                 </div>
-
             </div>
 
-
             <div class="status-card">
-
                 <span class="check">✓</span>
-
                 <div>
                     <strong>Feature Extraction</strong>
                     <small>
-                        {{ features|length }} features extracted
+                        {{ features|length if features else 0 }}
+                        features extracted
                     </small>
                 </div>
-
             </div>
 
-
             <div class="status-card">
-
                 <span class="check">✓</span>
-
                 <div>
                     <strong>VGG16 Classification</strong>
                     <small>
@@ -202,137 +149,117 @@ PneumoAI | Analysis Results
                         {% endif %}
                     </small>
                 </div>
-
             </div>
 
-
             <div class="status-card">
-
                 <span class="check">
-                    {% if prediction and prediction.heatmap_url %}
+                    {% if prediction and prediction.get('heatmap_url') %}
                         ✓
                     {% else %}
                         —
                     {% endif %}
                 </span>
-
                 <div>
                     <strong>Grad-CAM</strong>
                     <small>
-                        {% if prediction and prediction.heatmap_url %}
+                        {% if prediction and prediction.get('heatmap_url') %}
                             Generated
                         {% else %}
                             Not available
                         {% endif %}
                     </small>
                 </div>
-
             </div>
 
         </div>
-
     </section>
 
-
     <!-- GRAD-CAM VISUALIZATION -->
-
-    {% if prediction and prediction.heatmap_url %}
+    {% if prediction and prediction.get('heatmap_url') %}
 
     <section class="future-card">
 
         <div class="gradcam-content">
+            <span>EXPLAINABLE AI</span>
 
-            <span>
-                EXPLAINABLE AI
-            </span>
-
-            <h2>
-                Grad-CAM Visualization
-            </h2>
+            <h2>Grad-CAM Visualization</h2>
 
             <p>
                 This heatmap overlay visualizes image regions
-                that influenced the VGG16 prediction. It is
-                intended to support model interpretation and
-                does not confirm the presence or location of disease.
+                that influenced the VGG16 prediction. It supports
+                model interpretation but does not confirm the
+                presence or location of disease.
             </p>
-
         </div>
 
         <div class="gradcam-image">
-
             <img
-                src="{{ url_for(
-                    'static',
-                    filename=prediction.heatmap_url
-                ) }}"
+                src="{{ url_for('static', filename=prediction.heatmap_url) }}"
                 alt="Grad-CAM heatmap overlay"
             >
-
         </div>
 
     </section>
 
     {% endif %}
 
-
-    <!-- REPORT SECTION -->
-
+    <!-- PDF REPORT -->
     <section class="report-card">
 
-        <div>
+        <div class="report-content">
+            <span>DETAILED ANALYSIS</span>
 
-            <span>
-                DETAILED ANALYSIS
-            </span>
-
-            <h2>
-                Analysis Report
-            </h2>
+            <h2>Analysis Report</h2>
 
             <p>
-                The project pipeline includes preprocessing,
-                segmentation, DSP analysis, numerical feature
-                extraction, VGG16 classification and Grad-CAM.
-                A downloadable PDF report will be added separately.
+                Download a PDF report containing the model
+                prediction, uploaded X-ray, available DSP
+                visualization, Grad-CAM image, extracted
+                features and medical disclaimer.
             </p>
-
         </div>
 
-        <button
-            type="button"
-            class="report-button"
-            disabled
-        >
-            PDF Report — Coming Soon
-        </button>
+        {% if report_url %}
+
+            <a
+                href="{{ url_for('static', filename=report_url) }}"
+                class="report-button"
+                download="PneumoAI_Analysis_Report.pdf"
+            >
+                ↓ Download PDF Report
+            </a>
+
+        {% else %}
+
+            <button
+                type="button"
+                class="report-button"
+                disabled
+            >
+                PDF Report Unavailable
+            </button>
+
+        {% endif %}
 
     </section>
 
-
     <!-- MEDICAL DISCLAIMER -->
-
     <section class="disclaimer-section">
-
         <p class="disclaimer">
             <strong>Important:</strong>
             PneumoAI is an educational research prototype.
-            Its predictions may be incorrect and must not be
-            used for diagnosis, treatment decisions or replacing
-            assessment by a qualified medical professional.
+            Its predictions and confidence scores may be incorrect.
+            Do not use them for diagnosis or treatment decisions
+            or as a replacement for assessment by a qualified
+            medical professional.
         </p>
-
     </section>
 
-
     <!-- NEW ANALYSIS -->
-
     <div class="final-footer">
-
         <a href="/" class="secondary-button">
             ← Analyze Another X-Ray
         </a>
-
     </div>
 
 </div>

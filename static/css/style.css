@@ -502,20 +502,32 @@ body {
 }
 
 .report-button {
+    display: inline-block;
     padding: 12px 18px;
-
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid #cbd8e4;
     border-radius: 10px;
-
-    background: rgba(255,255,255,0.04);
-
-    color: inherit;
-
-    opacity: 0.45;
-
-    cursor: not-allowed;
-
+    background: #183153;
+    color: #ffffff;
+    text-decoration: none;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
     white-space: nowrap;
+    opacity: 1;
+    transition: background 0.2s ease;
+}
+
+a.report-button:hover {
+    background: #25486f;
+}
+
+button.report-button:disabled {
+    background: #e5e9ee;
+    color: #77818b;
+    border-color: #d8dee5;
+    cursor: not-allowed;
+    opacity: 0.8;
 }
 
 
@@ -552,4 +564,73 @@ body {
         align-items: flex-start;
     }
 
+
+    .final-topbar {
+        gap: 15px;
+        margin-bottom: 40px;
+        flex-wrap: wrap;
+    }
+
+    .result-card {
+        grid-template-columns: 1fr;
+    }
+
+    .result-image {
+        min-height: 280px;
+    }
+
+    .result-image img {
+        display: block;
+        min-height: 280px;
+    }
+
+    .future-card,
+    .report-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .gradcam-image {
+        max-width: 100%;
+    }
+
+    .report-button {
+        width: 100%;
+        white-space: normal;
+    }
+
+}
+
+
+/* GRAD-CAM IMAGE */
+
+.gradcam-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.gradcam-image {
+    flex: 1;
+    min-width: 0;
+    max-width: 380px;
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid #e3e8ed;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.gradcam-image img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+/* Missing X-ray image message */
+
+.image-unavailable {
+    padding: 30px;
+    text-align: center;
+    color: #66727e;
 }

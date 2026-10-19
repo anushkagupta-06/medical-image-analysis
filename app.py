@@ -1,67 +1,64 @@
+
 from flask import Flask, render_template, request, redirect, url_for
+from werkzeug.utils import secure_filename
 import os
 import uuid
 import cv2
 import numpy as np
 
 from models.pneumonia_classifier import predict_xray
+from models.feature_extractor import extract_all_features
 
 from preprocessing.preprocess import preprocess_pipeline
 from segmentation.segment import segment_pipeline
-from models.feature_extractor import extract_all_features
-from utils.dsp_analysis import compute_fft
 
+from utils.dsp_analysis import compute_fft
+from utils.report_generator import generate_pdf_report
+
+
+# =========================================================
+# APPLICATION CONFIGURATION
+# =========================================================
 
 app = Flask(__name__)
 
-# ---------------------------------------------------------
-# FOLDERS
-# ---------------------------------------------------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-UPLOAD_FOLDER = "static/uploads"
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB
 
 ALLOWED_EXTENSIONS = {
-    "png",
-    "jpg",
-    "jpeg",
-    "tif",
-    "tiff",
-    "bmp"
+    "png", "jpg", "jpeg", "tif", "tiff", "bmp"
 }
 
 
-# ---------------------------------------------------------
+# =========================================================
 # HELPER FUNCTIONS
-# ---------------------------------------------------------
+# =========================================================
 
 def allowed_file(filename):
-    """Check whether uploaded file has a supported extension."""
-
+    """Check whether the uploaded file has a supported extension."""
     return (
-        "." in filename
+        bool(filename)
+        and "." in filename
         and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
     )
 
 
 def save_image(image, filepath):
-    """
-    Save a NumPy/OpenCV image to disk.
-
-    Handles grayscale, BGR and non-uint8 images.
-    """
-
+    """Save an OpenCV/NumPy image as a PNG file."""
     if image is None:
         return False
 
     image_to_save = image.copy()
 
-    # Convert floating-point images to uint8
     if image_to_save.dtype != np.uint8:
+        if image_to_save.size == 0:
+            return False
 
         image_to_save = cv2.normalize(
             image_to_save,
@@ -79,20 +76,10 @@ def save_pipeline_images(
     segmentation_results,
     session_folder
 ):
-    """
-    Save all preprocessing and segmentation outputs.
-
-    Returns dictionaries containing paths that can
-    be passed to the Flask templates.
-    """
+    """Save preprocessing and segmentation outputs for the report/UI."""
 
     preprocessing_images = {}
-
     segmentation_images = {}
-
-    # -----------------------------------------------------
-    # PREPROCESSING IMAGES
-    # -----------------------------------------------------
 
     preprocessing_names = [
         "original",
@@ -106,29 +93,6 @@ def save_pipeline_images(
         "sharpened"
     ]
 
-    for name in preprocessing_names:
-
-        if name in preprocessing_results:
-
-            filename = f"{name}.png"
-
-            filepath = os.path.join(
-                session_folder,
-                filename
-            )
-
-            if save_image(
-                preprocessing_results[name],
-                filepath
-            ):
-                preprocessing_images[name] = (
-                    f"uploads/{os.path.basename(session_folder)}/{filename}"
-                )
-
-    # -----------------------------------------------------
-    # SEGMENTATION IMAGES
-    # -----------------------------------------------------
-
     segmentation_names = [
         "binary_threshold",
         "otsu_threshold",
@@ -141,47 +105,49 @@ def save_pipeline_images(
         "roi_annotated"
     ]
 
-    for name in segmentation_names:
+    session_id = os.path.basename(session_folder)
 
-        if name in segmentation_results:
-
+    for name in preprocessing_names:
+        if name in preprocessing_results:
             filename = f"{name}.png"
+            filepath = os.path.join(session_folder, filename)
 
-            filepath = os.path.join(
-                session_folder,
-                filename
-            )
+            if save_image(preprocessing_results[name], filepath):
+                preprocessing_images[name] = (
+                    f"uploads/{session_id}/{filename}"
+                )
 
-            if save_image(
-                segmentation_results[name],
-                filepath
-            ):
+    for name in segmentation_names:
+        if name in segmentation_results:
+            filename = f"{name}.png"
+            filepath = os.path.join(session_folder, filename)
+
+            if save_image(segmentation_results[name], filepath):
                 segmentation_images[name] = (
-                    f"uploads/{os.path.basename(session_folder)}/{filename}"
+                    f"uploads/{session_id}/{filename}"
                 )
 
     return preprocessing_images, segmentation_images
 
 
-# ---------------------------------------------------------
-# HOME
-# ---------------------------------------------------------
+# =========================================================
+# HOME PAGE
+# =========================================================
 
 @app.route("/")
 def home():
-
     return render_template("index.html")
 
 
-# ---------------------------------------------------------
-# ANALYSIS
-# ---------------------------------------------------------
+# =========================================================
+# ANALYZE CHEST X-RAY
+# =========================================================
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
 
     # -----------------------------------------------------
-    # CHECK FILE
+    # 1. VALIDATE UPLOAD
     # -----------------------------------------------------
 
     if "file" not in request.files:
@@ -189,14 +155,20 @@ def analyze():
 
     file = request.files["file"]
 
-    if file.filename == "":
+    if not file.filename:
         return redirect(url_for("home"))
 
     if not allowed_file(file.filename):
-        return redirect(url_for("home"))
+        return (
+            "Unsupported file type. Upload PNG, JPG, JPEG, TIF, TIFF or BMP.",
+            400
+        )
+
+    safe_filename = secure_filename(file.filename)
+    extension = safe_filename.rsplit(".", 1)[1].lower()
 
     # -----------------------------------------------------
-    # CREATE SESSION
+    # 2. CREATE UNIQUE SESSION FOLDER
     # -----------------------------------------------------
 
     session_id = uuid.uuid4().hex
@@ -208,17 +180,9 @@ def analyze():
 
     os.makedirs(session_folder, exist_ok=True)
 
-    # -----------------------------------------------------
-    # SAVE ORIGINAL UPLOAD
-    # -----------------------------------------------------
-
-    extension = file.filename.rsplit(".", 1)[1].lower()
-
-    uploaded_filename = f"uploaded.{extension}"
-
     uploaded_path = os.path.join(
         session_folder,
-        uploaded_filename
+        f"uploaded.{extension}"
     )
 
     file.save(uploaded_path)
@@ -227,138 +191,174 @@ def analyze():
     print("PNEUMOAI ANALYSIS")
     print("=" * 60)
 
-    # -----------------------------------------------------
-    # 1. PREPROCESSING
-    # -----------------------------------------------------
+    try:
 
-    print("\n[1/3] Running preprocessing...")
+        # -------------------------------------------------
+        # 3. IMAGE PREPROCESSING
+        # -------------------------------------------------
 
-    preprocessing_results = preprocess_pipeline(
-        uploaded_path
-    )
+        print("\n[1/5] Running preprocessing...")
 
-    print("✓ Preprocessing completed")
+        preprocessing_results = preprocess_pipeline(uploaded_path)
 
-    # -----------------------------------------------------
-    # DSP FREQUENCY-DOMAIN ANALYSIS
-    # -----------------------------------------------------
+        if (
+            not preprocessing_results
+            or preprocessing_results.get("grayscale") is None
+        ):
+            raise ValueError("Image preprocessing failed.")
 
-    print("\nRunning 2D FFT analysis...")
+        grayscale = preprocessing_results["grayscale"]
+        original = preprocessing_results["original"]
 
-    fft_image = compute_fft(
-        preprocessing_results["grayscale"]
-    )
+        print("Preprocessing completed.")
 
-    fft_path = os.path.join(
-        session_folder,
-        "fft_spectrum.png"
-    )
+        # -------------------------------------------------
+        # 4. DSP / 2D FFT ANALYSIS
+        # -------------------------------------------------
 
-    save_image(
-        fft_image,
-        fft_path
-    )
+        print("\n[2/5] Running 2D FFT analysis...")
 
-    print("✓ 2D FFT analysis completed")
+        fft_image = compute_fft(grayscale)
 
-    # -----------------------------------------------------
-    # 2. SEGMENTATION
-    # -----------------------------------------------------
-
-    print("\n[2/3] Running segmentation...")
-
-    grayscale = preprocessing_results["grayscale"]
-    original = preprocessing_results["original"]
-
-    segmentation_results = segment_pipeline(
-        grayscale,
-        original
-    )
-
-    print("✓ Segmentation completed")
-
-    # -----------------------------------------------------
-    # 3. FEATURE EXTRACTION
-    # -----------------------------------------------------
-
-    print("\n[3/3] Extracting features...")
-
-    features = extract_all_features(grayscale)
-
-    print(
-        f"✓ Extracted {len(features)} numerical features"
-    )
-
-    # -----------------------------------------------------
-    # 4. VGG16 PREDICTION + GRAD-CAM
-    # -----------------------------------------------------
-
-    print("\n[4/4] Running VGG16 prediction...")
-
-    heatmap_path = os.path.join(
-        session_folder,
-        "gradcam.png"
-    )
-
-    prediction = predict_xray(
-        uploaded_path,
-        heatmap_path
-    )
-
-    # Relative URL for displaying the image in HTML
-    prediction["heatmap_url"] = (
-        f"uploads/{session_id}/gradcam.png"
-    )
-
-    print("Predicted class:", prediction["label"])
-    print("Confidence:", prediction["confidence"], "%")
-    print("✓ Prediction and Grad-CAM completed")
-
-    # -----------------------------------------------------
-    # SAVE ALL PROCESSED IMAGES
-    # -----------------------------------------------------
-
-    print("\nSaving processed images...")
-
-    preprocessing_images, segmentation_images = (
-        save_pipeline_images(
-            preprocessing_results,
-            segmentation_results,
-            session_folder
+        fft_path = os.path.join(
+            session_folder,
+            "fft_spectrum.png"
         )
-    )
 
-    print("✓ Processed images saved")
+        if not save_image(fft_image, fft_path):
+            fft_path = None
+            print("Warning: FFT image could not be saved.")
 
-    # -----------------------------------------------------
-    # ROI
-    # -----------------------------------------------------
+        print("DSP analysis completed.")
 
-    roi_info = segmentation_results.get("roi_info")
+        # -------------------------------------------------
+        # 5. SEGMENTATION
+        # -------------------------------------------------
 
-    # -----------------------------------------------------
-    # RESULTS
-    # -----------------------------------------------------
+        print("\n[3/5] Running segmentation...")
 
-    print("\n" + "=" * 60)
-    print("ANALYSIS COMPLETED")
-    print("=" * 60)
+        segmentation_results = segment_pipeline(
+            grayscale,
+            original
+        )
 
-    return render_template(
-        "results.html",
-        session_id=session_id,
-        preprocessing_images=preprocessing_images,
-        segmentation_images=segmentation_images,
-        features=features,
-        roi_info=roi_info,
-        prediction=prediction
-    )
+        print("Segmentation completed.")
 
-# ---------------------------------------------------------
+        # -------------------------------------------------
+        # 6. FEATURE EXTRACTION
+        # -------------------------------------------------
+
+        print("\nExtracting image features...")
+
+        features = extract_all_features(grayscale)
+
+        print(f"Extracted {len(features)} numerical features.")
+
+        # -------------------------------------------------
+        # 7. VGG16 PREDICTION + GRAD-CAM
+        # -------------------------------------------------
+
+        print("\n[4/5] Running VGG16 prediction...")
+
+        heatmap_path = os.path.join(
+            session_folder,
+            "gradcam.png"
+        )
+
+        prediction = predict_xray(
+            uploaded_path,
+            heatmap_path
+        )
+
+        prediction["heatmap_url"] = (
+            f"uploads/{session_id}/gradcam.png"
+        )
+
+        print("Predicted class:", prediction["label"])
+        print("Confidence:", prediction["confidence"], "%")
+
+        # -------------------------------------------------
+        # 8. SAVE PIPELINE IMAGES
+        # -------------------------------------------------
+
+        preprocessing_images, segmentation_images = (
+            save_pipeline_images(
+                preprocessing_results,
+                segmentation_results,
+                session_folder
+            )
+        )
+
+        print("Processed images saved.")
+
+        roi_info = segmentation_results.get("roi_info")
+
+        # -------------------------------------------------
+        # 9. GENERATE PDF REPORT
+        # -------------------------------------------------
+
+        print("\n[5/5] Generating PDF report...")
+
+        report_path = os.path.join(
+            session_folder,
+            "analysis_report.pdf"
+        )
+
+        generate_pdf_report(
+            output_path=report_path,
+            image_path=uploaded_path,
+            prediction=prediction,
+            features=features,
+            roi_info=roi_info,
+            fft_path=fft_path,
+            heatmap_path=heatmap_path
+        )
+
+        report_url = (
+            f"uploads/{session_id}/analysis_report.pdf"
+        )
+
+        print("PDF report generated.")
+        print("\nAnalysis completed successfully.")
+        print("=" * 60)
+
+        # -------------------------------------------------
+        # 10. DISPLAY RESULTS
+        # -------------------------------------------------
+
+        return render_template(
+            "results.html",
+            session_id=session_id,
+            preprocessing_images=preprocessing_images,
+            segmentation_images=segmentation_images,
+            features=features,
+            roi_info=roi_info,
+            prediction=prediction,
+            report_url=report_url
+        )
+
+    except Exception as error:
+        app.logger.exception("PneumoAI analysis failed")
+
+        return (
+            "Analysis could not be completed. "
+            "Check the Flask terminal for the error details.",
+            500
+        )
+
+
+# =========================================================
+# FILE SIZE ERROR
+# =========================================================
+
+@app.errorhandler(413)
+def file_too_large(error):
+    return "File too large. Please upload an image smaller than 16 MB.", 413
+
+
+# =========================================================
 # RUN APPLICATION
-# ---------------------------------------------------------
+# =========================================================
 
 if __name__ == "__main__":
-
     app.run(debug=True)
-# -----------------------------------------------------
