@@ -1,14 +1,26 @@
-venv/
-__pycache__/
-*.pyc
 
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.env
+
+# macOS
 .DS_Store
 
+# Uploaded images and generated reports
 static/uploads/*
 static/reports/*
 
-models/pretrained/*.pth
+# Model weights and checkpoints
+*.pth
+*.pt
 
-*.ipynb_checkpoints
+# Datasets and archives
+dataset/
+data/
+*.zip
+*.dcm
 
-test_images/
+# Jupyter
+.ipynb_checkpoints/

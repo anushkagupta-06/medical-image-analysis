@@ -1,10 +1,15 @@
+
 {% extends "base.html" %}
+
+{% block title %}
+PneumoAI | Analysis Results
+{% endblock %}
 
 {% block content %}
 
 <div class="final-results">
 
-    <!-- TOP -->
+    <!-- TOP BAR -->
 
     <div class="final-topbar">
 
@@ -34,13 +39,13 @@
 
         <p>
             Automated medical image analysis using
-            DSP and deep learning techniques.
+            digital signal processing and deep learning.
         </p>
 
     </section>
 
 
-    <!-- MAIN RESULT -->
+    <!-- MAIN CLASSIFICATION RESULT -->
 
     <section class="result-card">
 
@@ -51,7 +56,7 @@
                     'static',
                     filename=preprocessing_images['original']
                 ) }}"
-                alt="Chest X-Ray"
+                alt="Uploaded chest X-ray"
             >
 
         </div>
@@ -60,31 +65,41 @@
         <div class="result-content">
 
             <span class="result-label">
-                CLASSIFICATION RESULT
+                VGG16 CLASSIFICATION RESULT
             </span>
-
 
             {% if prediction %}
 
                 <h2>
-                    {{ prediction }}
+                    {{ prediction.label }}
                 </h2>
-
-                {% if confidence %}
 
                 <div class="confidence">
 
                     <span>
-                        Confidence
+                        Model Confidence
                     </span>
 
                     <strong>
-                        {{ confidence }}%
+                        {{ prediction.confidence }}%
                     </strong>
 
                 </div>
 
-                {% endif %}
+                <p>
+                    {% if prediction.label == "PNEUMONIA" %}
+                        The model classified this X-ray as
+                        pneumonia-positive.
+                    {% else %}
+                        The model classified this X-ray as
+                        normal.
+                    {% endif %}
+                </p>
+
+                <p class="disclaimer">
+                    Research prototype only. This prediction
+                    is not a confirmed medical diagnosis.
+                </p>
 
             {% else %}
 
@@ -93,10 +108,8 @@
                 </h2>
 
                 <p>
-                    The DSP and image-processing pipeline
-                    has completed successfully. The CNN
-                    and VGG16 classification models will
-                    provide the final diagnosis.
+                    The model prediction is not available.
+                    Please try uploading the image again.
                 </p>
 
             {% endif %}
@@ -130,15 +143,8 @@
                 <span class="check">✓</span>
 
                 <div>
-
-                    <strong>
-                        Image Preprocessing
-                    </strong>
-
-                    <small>
-                        Completed
-                    </small>
-
+                    <strong>Image Preprocessing</strong>
+                    <small>Completed</small>
                 </div>
 
             </div>
@@ -149,15 +155,8 @@
                 <span class="check">✓</span>
 
                 <div>
-
-                    <strong>
-                        DSP Analysis
-                    </strong>
-
-                    <small>
-                        Completed
-                    </small>
-
+                    <strong>DSP Analysis</strong>
+                    <small>2D FFT completed</small>
                 </div>
 
             </div>
@@ -168,15 +167,8 @@
                 <span class="check">✓</span>
 
                 <div>
-
-                    <strong>
-                        Segmentation
-                    </strong>
-
-                    <small>
-                        Completed
-                    </small>
-
+                    <strong>Image Segmentation</strong>
+                    <small>Completed</small>
                 </div>
 
             </div>
@@ -187,15 +179,52 @@
                 <span class="check">✓</span>
 
                 <div>
-
-                    <strong>
-                        Feature Extraction
-                    </strong>
-
+                    <strong>Feature Extraction</strong>
                     <small>
-                        Completed
+                        {{ features|length }} features extracted
                     </small>
+                </div>
 
+            </div>
+
+
+            <div class="status-card">
+
+                <span class="check">✓</span>
+
+                <div>
+                    <strong>VGG16 Classification</strong>
+                    <small>
+                        {% if prediction %}
+                            Completed
+                        {% else %}
+                            Not available
+                        {% endif %}
+                    </small>
+                </div>
+
+            </div>
+
+
+            <div class="status-card">
+
+                <span class="check">
+                    {% if prediction and prediction.heatmap_url %}
+                        ✓
+                    {% else %}
+                        —
+                    {% endif %}
+                </span>
+
+                <div>
+                    <strong>Grad-CAM</strong>
+                    <small>
+                        {% if prediction and prediction.heatmap_url %}
+                            Generated
+                        {% else %}
+                            Not available
+                        {% endif %}
+                    </small>
                 </div>
 
             </div>
@@ -205,11 +234,13 @@
     </section>
 
 
-    <!-- EXPLAINABILITY -->
+    <!-- GRAD-CAM VISUALIZATION -->
+
+    {% if prediction and prediction.heatmap_url %}
 
     <section class="future-card">
 
-        <div>
+        <div class="gradcam-content">
 
             <span>
                 EXPLAINABLE AI
@@ -220,21 +251,32 @@
             </h2>
 
             <p>
-                A visual explanation highlighting the regions
-                that influence the final deep-learning prediction
-                will be available after model integration.
+                This heatmap overlay visualizes image regions
+                that influenced the VGG16 prediction. It is
+                intended to support model interpretation and
+                does not confirm the presence or location of disease.
             </p>
 
         </div>
 
-        <div class="future-icon">
-            ◈
+        <div class="gradcam-image">
+
+            <img
+                src="{{ url_for(
+                    'static',
+                    filename=prediction.heatmap_url
+                ) }}"
+                alt="Grad-CAM heatmap overlay"
+            >
+
         </div>
 
     </section>
 
+    {% endif %}
 
-    <!-- REPORT -->
+
+    <!-- REPORT SECTION -->
 
     <section class="report-card">
 
@@ -249,20 +291,36 @@
             </h2>
 
             <p>
-                The detailed report will contain preprocessing,
-                segmentation, DSP, feature extraction,
-                classification metrics and explainability results.
+                The project pipeline includes preprocessing,
+                segmentation, DSP analysis, numerical feature
+                extraction, VGG16 classification and Grad-CAM.
+                A downloadable PDF report will be added separately.
             </p>
 
         </div>
 
-
         <button
+            type="button"
             class="report-button"
             disabled
         >
             PDF Report — Coming Soon
         </button>
+
+    </section>
+
+
+    <!-- MEDICAL DISCLAIMER -->
+
+    <section class="disclaimer-section">
+
+        <p class="disclaimer">
+            <strong>Important:</strong>
+            PneumoAI is an educational research prototype.
+            Its predictions may be incorrect and must not be
+            used for diagnosis, treatment decisions or replacing
+            assessment by a qualified medical professional.
+        </p>
 
     </section>
 

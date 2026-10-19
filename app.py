@@ -4,6 +4,8 @@ import uuid
 import cv2
 import numpy as np
 
+from models.pneumonia_classifier import predict_xray
+
 from preprocessing.preprocess import preprocess_pipeline
 from segmentation.segment import segment_pipeline
 from models.feature_extractor import extract_all_features
@@ -288,6 +290,31 @@ def analyze():
     )
 
     # -----------------------------------------------------
+    # 4. VGG16 PREDICTION + GRAD-CAM
+    # -----------------------------------------------------
+
+    print("\n[4/4] Running VGG16 prediction...")
+
+    heatmap_path = os.path.join(
+        session_folder,
+        "gradcam.png"
+    )
+
+    prediction = predict_xray(
+        uploaded_path,
+        heatmap_path
+    )
+
+    # Relative URL for displaying the image in HTML
+    prediction["heatmap_url"] = (
+        f"uploads/{session_id}/gradcam.png"
+    )
+
+    print("Predicted class:", prediction["label"])
+    print("Confidence:", prediction["confidence"], "%")
+    print("✓ Prediction and Grad-CAM completed")
+
+    # -----------------------------------------------------
     # SAVE ALL PROCESSED IMAGES
     # -----------------------------------------------------
 
@@ -324,7 +351,7 @@ def analyze():
         segmentation_images=segmentation_images,
         features=features,
         roi_info=roi_info,
-        prediction=None
+        prediction=prediction
     )
 
 # ---------------------------------------------------------
